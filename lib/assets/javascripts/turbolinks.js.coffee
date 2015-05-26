@@ -119,11 +119,13 @@ constrainPageCacheTo = (limit) ->
     triggerEvent EVENTS.EXPIRE, pageCache[key]
     delete pageCache[key]
 
-changePage = (title, body, csrfToken, runScripts) ->
+changePage = (title, body, csrfToken, metaTags, linkCanonical, runScripts) ->
   triggerEvent EVENTS.BEFORE_UNLOAD
   document.title = title
   document.documentElement.replaceChild body, document.body
   CSRFToken.update csrfToken if csrfToken?
+  MetaTags.update metaTags if metaTags?
+  LinkCanonical.update linkCanonical if linkCanonical?
   setAutofocusElement()
   executeScriptTags() if runScripts
   currentState = window.history.state
@@ -248,7 +250,7 @@ processResponse = ->
 
 extractTitleAndBody = (doc) ->
   title = doc.querySelector 'title'
-  [ title?.textContent, removeNoscriptTags(doc.querySelector('body')), CSRFToken.get(doc).token, 'runScripts' ]
+  [ title?.textContent, removeNoscriptTags(doc.querySelector('body')), CSRFToken.get(doc).token, MetaTags.get(doc), LinkCanonical.get(doc), 'runScripts' ]
 
 CSRFToken =
   get: (doc = document) ->
@@ -259,6 +261,37 @@ CSRFToken =
     current = @get()
     if current.token? and latest? and current.token isnt latest
       current.node.setAttribute 'content', latest
+
+LinkCanonical =
+  get: (doc) ->
+    tag = undefined
+    doc = document unless doc
+
+    node: tag = doc.querySelector('link[rel="canonical"]')
+    lnk: if tag != null then (if typeof tag.getAttribute == 'function' then tag.getAttribute('href') else undefined) else undefined
+
+  update: (latest) ->
+    current = undefined
+    current = @get()
+    document.head.removeChild(current.node) if current.lnk
+    document.head.appendChild(latest.node) if latest.lnk
+
+MetaTags =
+  get: (doc) ->
+    doc = document unless doc
+    doc.querySelectorAll('meta[name]:not([name="viewport"]):not([name="csrf-token"]), meta[property^="og"]')
+
+  update: (_tags) ->
+    currnets_tags = undefined
+    current_tags = @get()
+    i = 0
+    while i < current_tags.length
+      document.head.removeChild current_tags[i]
+      i++
+    i = 0
+    while i < _tags.length
+      document.head.appendChild _tags[i]
+      i++
 
 createDocument = (html) ->
   doc = document.documentElement.cloneNode()
