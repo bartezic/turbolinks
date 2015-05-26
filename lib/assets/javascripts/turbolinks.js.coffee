@@ -122,10 +122,10 @@ constrainPageCacheTo = (limit) ->
 changePage = (title, body, csrfToken, metaTags, linkCanonical, runScripts) ->
   triggerEvent EVENTS.BEFORE_UNLOAD
   document.title = title
-  document.documentElement.replaceChild body, document.body
-  CSRFToken.update csrfToken if csrfToken?
   MetaTags.update metaTags if metaTags?
   LinkCanonical.update linkCanonical if linkCanonical?
+  document.documentElement.replaceChild body, document.body
+  CSRFToken.update csrfToken if csrfToken?
   setAutofocusElement()
   executeScriptTags() if runScripts
   currentState = window.history.state
